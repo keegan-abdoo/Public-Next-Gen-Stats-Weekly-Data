@@ -87,7 +87,7 @@ webElement objects, like remoteDriver objects, can be appended by methods. The w
 remDr$navigate(https://nextgenstats.nfl.com/stats/passing/2018)
 remDr$findElement("xpath", "//label[text() = 'Season']//following::i")$clickElement()
 ```
-Again, we don't need to use the filters to navigate through the pages because the urls are very simple, but on other websites it becomes crucial, especially when the data isn't stored in an HTMLtable.
+Again, we don't need to use the filters to navigate through the pages because the urls are very simple, but on other websites it becomes crucial, especially when the data isn't stored in an HTML table.
 
 To close a Selenium browser, simply use the close method on the remoteDriver, and then stop the server with a method on the driver.
 
@@ -98,9 +98,10 @@ driver[["server"]]$stop()
 
 ## Create our Scraping Function
 
+So now that we have an idea what's going on with the Selenium server, we can construct our function.  We want the function to read in an url, navigate to that page, scrape the corresponding table and clean up the data.
+
 ```r
 scrape_leaderboard <- function(webpage){
-    # Nagivate to page
     remDr$navigate(webpage)
     # Wait three seconds for webpage to load
     Sys.sleep(3)
@@ -114,8 +115,62 @@ scrape_leaderboard <- function(webpage){
     colnames(df) <- coln
     # Add columns for Week and Season
     df <- df %>%
-        mutate(Season = scaffold[scaffold$url == webpage,]$szn,
-               Week = scaffold[scaffold$url == webpage,]$wk)
+        mutate(Season = str_extract(create_urls("passing")[1], "[0-9]+(?=/[0-9]+/$)"),
+               Week = str_extract(create_urls("passing")[1], "[0-9]+(?=/$)"))
     return(df)
 }
+```
+Since the data we want is stored in an HTML table, this is relatively straight forward. First we parse the HTML code, basically storing it in our R session.  We can then extract any HTML table from the webpage, using the readHTMLTable() function, which returns a list of data frames for each HTML table found.  In this case, the column names are in the first data frame in the list, and the actual data is in the second.
+
+The column names are very messy on there own, for instance, here's passing:
+
+```r
+colnames(df[[1]])
+
+ [1] "PLAYER NAME"                                "TEAM"                                      
+ [3] "TTTime To Throw (TT)"                       "CAYAverage Completed Air Yards (CAY)"      
+ [5] "IAYAverage Intended Air Yards (IAY)"        "AYDAverage Air Yards Differential (AYD)"   
+ [7] "AGG%Aggressiveness (AGG%)"                  "LCADLongest Completed Air Distance (LCAD)" 
+ [9] "AYTSAir Yards to the Sticks (AYTS)"         "ATTPassing Attempts (ATT)"                 
+[11] "YDSPassing Yards (YDS)"                     "TDPassing Touchdowns (TD)"                 
+[13] "INTInterceptions (INT)"                     "RATEPasser Rating (RATE)"                  
+[15] "COMP%Completion Percentage (COMP%)"         "xCOMP%Expected Completion Percentage"      
+[17] "+/-Completion Percentage Above Expectation" ""
+
+```
+So we use some regex (regular expressions) string manipulation to clean them up. Because the actual webpage has tool tips, it combines the column header and tool tip in one string. We want to isolate the abbreviation that you see on the actual webpage.  A break down of the regex ("^(([A-z][A-Z]+%?)|(\\+/-)|(8\\+D%))(?=([A-Z][a-z].+)|\\b|8|%)") is as follows:
+
+^ indicates the start of the string.  The next group of parentheses allows for 3 different types of strings that can start the string (the | operator means "or"):
+1. ([A-z][A-Z]+%?) - a letter (ignoring case), followed by at least (+ operator) 1 upper case letter, followed by at most (? operator) one percentage sign
+2. (\\+/-) - a plus sign followed up a forward slash followed by a minus sign (notice the // before +, this is called a special character, and is used for characters that are operators on their own)
+3. (8\\+D%) - a 8 followed by a plus sign followed by an upper case D followed by a percentage sign
+
+The second part of the regex starts with "(?=", which indicates that the first pattern is followed by ([A-Z][a-z].+)|\\b|8|%), with "\\b" representing a word boundary.  For more on string manipulation, check out the [stringr cheat sheet](http://edrub.in/CheatSheets/cheatSheetStringr.pdf).
+
+
+Back from that string manipulation tangent, we use similar techniques to extract the season and week from the url, and then add those as columns to the dataframe.  The function then returns the dataframe with cleaned column names.
+
+## Mapping the URL vectors through the scraping function
+
+Finally comes the fun part. Here we simply open up the remote driver, and run each of the generated url vectors through the function using map_dfr() to generate a dataframe for each category.
+
+```r
+# Open webpage
+driver <- rsDriver(browser = c("firefox"))
+remDr <- driver[["client"]]
+# Run passing, rushing, and receiving url vectors through the scrape_leaderboard function
+passing <- map_dfr(create_urls("passing"), scrape_leaderboard)
+rushing <- map_dfr(create_urls("rushing"), scrape_leaderboard)
+receiving <- map_dfr(create_urls("receiving"), scrape_leaderboard)
+#Close when finished
+remDr$close()
+driver[["server"]]$stop()
+```
+
+After that, we can save the files to the folder that we have as our working directory with read_csv().
+
+```r
+write_csv(passing, "NGS Public Passing by Week.csv")
+write_csv(rushing, "NGS Public Rushing by Week.csv")
+write_csv(receiving, "NGS Public Receiving by Week.csv")
 ```
