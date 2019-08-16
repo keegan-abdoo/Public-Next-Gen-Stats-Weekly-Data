@@ -39,8 +39,8 @@ scrape_leaderboard <- function(webpage){
     colnames(df) <- coln
     # Add columns for Week and Season
     df <- df %>%
-        mutate(Season = scaffold[scaffold$url == webpage,]$szn,
-               Week = scaffold[scaffold$url == webpage,]$wk)
+        mutate(Season = str_extract(create_urls("passing")[1], "[0-9]+(?=/[0-9]+/$)"),
+               Week = str_extract(create_urls("passing")[1], "[0-9]+(?=/$)"))
     return(df)
 }
 
