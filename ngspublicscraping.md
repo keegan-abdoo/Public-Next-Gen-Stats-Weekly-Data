@@ -4,7 +4,7 @@ Inspired by **Ben Baldwin's** ([@benbbaldwin](https://twitter.com/benbbaldwin)) 
 
 I'm far from an expert in RSelenium, and welcome any comments on how to improve my code.  But I've been able to develop proficiency with the package that has provided me with the ability to scrape big databases online.  I suggest following along with this [RSelenium Baics Primer](https://rpubs.com/johndharrison/RSelenium-Basics).
 
-The [Next Gen Stats public database](https://nextgenstats.nfl.com/stats/passing#yards) doesn't include that much, but the ability to view stats by week allows us to manipulate data and obtain datasets that are not available directly from the website (such as team defense statistics).  Luckily the urls for each page are very easily constructed so we won't have to use xpath and css selectors to actually interact with the webpage. I still include a quick example so you can see for yourself how this package allows you to control a brwoser.
+The [Next Gen Stats public database](https://nextgenstats.nfl.com/stats/passing#yards) doesn't include that much, but the ability to view stats by week allows us to manipulate data and obtain datasets that are not available directly from the website (such as team defense statistics).  Luckily the urls for each page are very easily constructed so we won't have to use xpath and css selectors to actually interact with the webpage. I still include a quick example so you can see for yourself how this package allows you to control a browser.
 
 -- Keegan Abdoo, [@KeeganAbdoo](https://twitter.com/KeeganAbdoo)
 
